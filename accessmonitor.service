@@ -1,0 +1,13 @@
+[Unit]
+Description=Access monitor service
+After=network.target
+
+[Service]
+Type=simple
+User=accessmonitor
+Group=accessmonitor
+ExecStart=/usr/local/bin/accessmonitor
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,13 @@
+smtp:
+  host: mail.example.com
+  from: user@example.com
+  to:
+    - user1@example.com
+    - user2@example.com
+files:
+  - /etc/passwd
+  - /var/local/honeypot
+limits:
+  general_interval: 1200
+  item_interval: 1200
+
