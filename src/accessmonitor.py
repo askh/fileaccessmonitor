@@ -4,15 +4,38 @@ import argparse
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
-import inotify.adapters
+# import inotify.adapters
 import logging
 import os
+import pyinotify
 from smtplib import SMTP
 import time
 import yaml
 
 DEFAULT_CONFIG_FILE_NAME = 'accessmonitor.yml'
 
+class EventHandler(pyinotify.ProcessEvent):
+    def process_default(self, event):
+        logging.debug(f"Event for file {event.pathname}")
+        file_event_handler(event.pathname)
+
+last_event_time = 0
+items_last_event_time = { }
+unsended = set()
+config = None
+
+def file_event_handler(full_path):
+    global last_event_time, items_last_event_time, unsended, config
+    current_time = time.time()
+    unsended.add(full_path)
+    if (last_event_time == 0 or last_event_time + config['limits']['general_interval'] < current_time) and \
+       (full_path not in items_last_event_time.keys() or \
+        items_last_event_time[full_path] + config['limits']['item_interval'] < current_time):
+        last_event_time = current_time
+        items_last_event_time[full_path] = current_time
+        notify(config, unsended)
+        unsended.clear()    
+        
 def notify(config, files):
     logging.debug(f"notify for files: {', '.join(files)}")
     content = "Access registered to files:\n" + "\n".join(files)
@@ -30,10 +53,7 @@ def notify(config, files):
                       message.as_string())
 
 def main():
-    last_event_time = 0
-    items_last_event_time = { }
-    unsended = set()
-    
+    global config
     current_dir = os.path.dirname(os.path.realpath(__file__))
     default_config_file = os.path.join(current_dir, DEFAULT_CONFIG_FILE_NAME)
     arg_parser = argparse.ArgumentParser(description='File watcher')
@@ -61,22 +81,28 @@ def main():
         logging.debug(f"Can't load the config file {args.config}. Exception: {e}")
         sys.exit(f"Can't load the config file {args.config}.")
 
-    inf = inotify.adapters.Inotify()
-    for file in config["files"]:
-        inf.add_watch(file)
+    # inf = inotify.adapters.Inotify()
+    # for file in config["files"]:
+    #     inf.add_watch(file)
 
-    for event in inf.event_gen(yield_nones=False):
-        current_time = time.time()
-        (_, type_names, path, filename) = event
-        full_path = os.path.join(path, filename)
-        unsended.add(full_path)
-        if (last_event_time == 0 or last_event_time + config['limits']['general_interval'] < current_time) and \
-           (full_path not in items_last_event_time.keys() or \
-            items_last_event_time[full_path] + config['limits']['item_interval'] < current_time):
-            last_event_time = current_time
-            items_last_event_time[full_path] = current_time
-            notify(config, unsended)
-            unsended.clear()
+    # for event in inf.event_gen(yield_nones=False):
+    #     current_time = time.time()
+    #     (_, type_names, path, filename) = event
+    #     full_path = os.path.join(path, filename)
+    #     unsended.add(full_path)
+    #     if (last_event_time == 0 or last_event_time + config['limits']['general_interval'] < current_time) and \
+    #        (full_path not in items_last_event_time.keys() or \
+    #         items_last_event_time[full_path] + config['limits']['item_interval'] < current_time):
+    #         last_event_time = current_time
+    #         items_last_event_time[full_path] = current_time
+    #         notify(config, unsended)
+    #         unsended.clear()
+
+    wm = pyinotify.WatchManager()
+    notifier = pyinotify.Notifier(wm, EventHandler())
+    for file in config["files"]:
+        wm.add_watch(file, pyinotify.ALL_EVENTS)
+    notifier.loop()
 
 if __name__ == '__main__':
     main()
