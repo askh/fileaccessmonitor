@@ -4,6 +4,7 @@ smtp:
   to:
     - user1@example.com
     - user2@example.com
+  subject: "Access to files"
 files:
   - /etc/passwd
   - /var/local/honeypot
