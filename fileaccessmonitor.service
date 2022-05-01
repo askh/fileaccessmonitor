@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=accessmonitor
-Group=accessmonitor
-ExecStart=/usr/local/bin/accessmonitor
+User=fileaccessmonitor
+Group=fileaccessmonitor
+ExecStart=/usr/bin/fileaccessmonitor
 
 [Install]
 WantedBy=multi-user.target
