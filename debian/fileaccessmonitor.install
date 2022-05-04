@@ -1,0 +1,3 @@
+src/fileaccessmonitor.py usr/bin/fileaccessmonitor.py
+fileaccessmonitor.yml etc/fileaccessmonitor.yml
+fileaccessmonitor.service etc/systemd/system/fileaccessmonitor.service
